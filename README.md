@@ -1,6 +1,6 @@
-# 🎬 Movierulz Video Extractor
+# 🎬 MovieNight
 
-A lightweight Python server that extracts direct, ad-free HLS video stream URLs from Movierulz movie pages — bypassing pop-up ads and page distractions so the stream can be played directly in VLC, ExoPlayer, or any HLS-compatible player.
+A self-hosted movie night web app that presents a clean browsable UI for your movie list and extracts direct, ad-free HLS video stream URLs from Movierulz pages — so streams can be played directly in VLC, ExoPlayer, or any HLS-compatible player.
 
 > ⚠️ **DISCLAIMER — Please Read**
 >
@@ -20,21 +20,25 @@ A lightweight Python server that extracts direct, ad-free HLS video stream URLs 
 ## How It Works
 
 ```
-Movierulz Page URL
+Browser (Web UI)
       │
       ▼
- url_extractor.py          — Scrapes iFrame player URLs from the movie page
+ movie_app.py              — Main Flask app (port 8000)
+ ├── /                     — Movie list UI
+ ├── /api/movies           — Serves cached movie list
+ └── /api/extract          — Forwards extraction requests to proxy server
       │
       ▼
-   yt-dlp             — Resolves obfuscated iframe URL → raw .m3u8 HLS URL
-      │
-      ▼
-url_proxy_server.py   — Flask server with:
- ├── /api/extract      — REST API to trigger extraction
- └── /api/proxy        — Transparent proxy that:
-                          • Rewrites M3U8 playlist segment URLs
-                          • Strips fake PNG headers from .ts video chunks
-                          • Attaches required Referer/Origin headers
+ lib/url_proxy_server.py   — Proxy/Extractor server (port 8001, auto-started)
+ ├── /api/extract          — Triggers extraction pipeline
+ │        │
+ │        ▼
+ │   lib/url_extractor.py  — Scrapes iframe URLs → yt-dlp → raw .m3u8
+ │
+ └── /api/proxy            — Transparent HLS proxy that:
+                               • Rewrites M3U8 playlist segment URLs
+                               • Strips fake PNG headers from .ts video chunks
+                               • Attaches required Referer/Origin headers
 ```
 
 ---
@@ -43,9 +47,12 @@ url_proxy_server.py   — Flask server with:
 
 | File | Description |
 |------|-------------|
-| `url_extractor.py` | Core extraction logic. Fetches the Movierulz page, finds the embedded player iframe URLs, and uses `yt-dlp` to resolve the raw `.m3u8` stream URL. |
-| `url_proxy_server.py` | Flask HTTP server exposing the REST API and the M3U8 proxy. |
-| `web_ui.html` | Simple browser-based test interface. Served at `http://localhost:8001/`. |
+| `movie_app.py` | Main entry point. Flask web app on port 8000. Auto-starts the proxy server and serves the movie list UI. |
+| `movie_list_extractor.py` | Builds and caches the list of movies for the UI. |
+| `lib/url_extractor.py` | Core extraction logic. Fetches the Movierulz page, finds the embedded player iframe URLs, and uses `yt-dlp` to resolve the raw `.m3u8` stream URL. |
+| `lib/url_proxy_server.py` | Flask HTTP server on port 8001 exposing the extraction REST API and the M3U8 proxy. Started automatically by `movie_app.py`. |
+| `templates/` | Jinja2 HTML templates for the web UI. |
+| `static/` | Static assets (CSS, JS) for the web UI. |
 | `requirements.txt` | Python dependencies. |
 
 ---
@@ -55,38 +62,41 @@ url_proxy_server.py   — Flask server with:
 ### Requirements
 - Python 3.9+
 - pip
+- `yt-dlp` (installed via pip)
 
 ### Install
 
 ```bash
 # Clone the repo
-git clone https://github.com/ideepuraj/movierulz-video-extractor.git
-cd movierulz-video-extractor
+git clone https://github.com/ideepuraj/movie-night-app.git
+cd movie-night-app
 
 # Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate       # Linux/Mac
-# venv\Scripts\activate        # Windows
+python3 -m venv .venv
+source .venv/bin/activate       # Linux/Mac
+# .venv\Scripts\activate        # Windows
 
 # Install dependencies
 pip install -r requirements.txt
-
-# Install yt-dlp binary into the venv
-pip install yt-dlp
 ```
 
 ### Run
 
 ```bash
-python url_proxy_server.py
+python movie_app.py
 ```
 
-Server starts on **http://0.0.0.0:8001** by default.  
-Use the `PORT` environment variable to change the port:
+This starts both servers automatically:
+- **Web UI** → http://localhost:8000
+- **Proxy/Extractor** → http://localhost:8001 (internal, auto-started)
+
+Use `APP_PORT` to change the web UI port:
 
 ```bash
-PORT=9000 python url_proxy_server.py
+APP_PORT=9000 python movie_app.py
 ```
+
+Press **Ctrl+C** to stop — both servers shut down cleanly.
 
 ---
 
@@ -126,14 +136,12 @@ Internal proxy endpoint called by the player. Not meant for direct use — use t
 
 ---
 
-## Testing
+## Usage
 
-Open **http://localhost:8001** in your browser.  
-Paste a Movierulz movie page URL and click **Extract**.
-
-- Copy the **Proxy URL** to paste into VLC (`Media → Open Network Stream`)
-- Click **▶ Open in VLC** to launch directly via VLC intent
-- Click **▶ Play in Browser** to test in-page with the built-in HLS player
+1. Open **http://localhost:8000** in your browser.
+2. Browse your movie list and pick a title.
+3. Click a movie to extract its stream URL.
+4. Copy the **Proxy URL** to paste into VLC (`Media → Open Network Stream`), or click **▶ Open in VLC** to launch directly.
 
 ---
 

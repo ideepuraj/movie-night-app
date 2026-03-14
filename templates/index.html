@@ -3,270 +3,626 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MovieNight | Stream</title>
+    <title>MovieNight</title>
     <style>
         :root {
-            --bg-color: #050505;
+            --bg:      #141414;
             --card-bg: #181818;
-            --accent-red: #E50914;
-            --text-main: #ffffff;
-            --text-grey: #a3a3a3;
+            --red:     #E50914;
+            --white:   #ffffff;
+            --grey:    #a3a3a3;
         }
 
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
         body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
+            background: var(--bg);
+            color: var(--white);
             font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            margin: 0;
-            padding: 0;
             overflow-x: hidden;
         }
 
-        /* Navbar */
+        /* ── Navbar ── */
         .navbar {
             position: fixed;
-            top: 0;
-            width: 100%;
-            height: 70px;
+            top: 0; width: 100%;
+            height: 68px;
             display: flex;
             align-items: center;
             padding: 0 4%;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            gap: 28px;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.95), transparent);
             z-index: 1000;
+            transition: background 0.3s;
+        }
+        .navbar.scrolled { background: rgba(0,0,0,0.97); }
+
+        .brand {
+            color: var(--red);
+            font-size: 1.7rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+            cursor: pointer;
         }
 
-        .logo { 
-            height: 40px; 
-            margin-right: 15px; 
+        .nav-tabs {
+            display: flex;
+            gap: 2px;
+            list-style: none;
+        }
+        .nav-tabs li a {
+            display: block;
+            color: #b3b3b3;
+            font-size: 0.82rem;
+            font-weight: 500;
+            padding: 7px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.15s, background 0.15s;
+            white-space: nowrap;
+            border-bottom: 2px solid transparent;
+        }
+        .nav-tabs li a:hover { color: var(--white); background: rgba(255,255,255,0.07); }
+        .nav-tabs li a.active {
+            color: var(--white);
+            font-weight: 700;
+            border-bottom: 2px solid var(--red);
+            background: rgba(229,9,20,0.12);
         }
 
-        .brand-name { 
-            color: var(--accent-red); 
-            font-size: 1.8rem; 
-            font-weight: bold; 
-            letter-spacing: 1px;
-        }
-
-        /* Hero Banner */
+        /* ── Hero Banner ── */
         .banner {
-            height: 55vh;
-            background-image: linear-gradient(to top, var(--bg-color), transparent),
-                              linear-gradient(to right, rgba(0,0,0,0.8), transparent),
-                              url('https://www.5movierulz.florist/uploads/Merry-Christmas-Malayalam.jpg');
+            position: relative;
+            height: 58vh;
+            min-height: 340px;
+            display: flex;
+            align-items: flex-end;
+            padding: 0 4% 52px;
+            overflow: hidden;
+        }
+
+        /* Two layers that crossfade between each other */
+        .banner-bg {
+            position: absolute;
+            inset: 0;
             background-size: cover;
-            background-position: center 20%;
+            background-position: center 25%;
+            background-color: #1a1a2e;
+            transition: opacity 1.2s ease;
+        }
+        .banner-bg.behind { opacity: 0; }
+        .banner-bg.front  { opacity: 1; }
+
+        /* Overlay gradients on top of both layers */
+        .banner-overlay {
+            position: absolute;
+            inset: 0;
+            background:
+                linear-gradient(to top,  var(--bg) 0%, rgba(20,20,20,0.55) 45%, rgba(20,20,20,0.1) 100%),
+                linear-gradient(to right, rgba(0,0,0,0.8) 30%, transparent 75%);
+            z-index: 1;
+        }
+
+        .banner-content {
+            position: relative;
+            z-index: 2;
+        }
+        .banner-content h1 {
+            font-size: clamp(2rem, 4.5vw, 3.5rem);
+            font-weight: 800;
+            text-shadow: 2px 2px 14px rgba(0,0,0,0.9);
+            margin-bottom: 6px;
+            line-height: 1.1;
+            transition: opacity 0.5s;
+        }
+        .banner-content p { color: var(--grey); font-size: 0.9rem; letter-spacing: 0.5px; }
+
+        /* ── Category Section ── */
+        .category-section {
+            margin-bottom: 8px;
+            padding-top: 12px;
+            scroll-margin-top: 80px;   /* offset for fixed navbar */
+        }
+
+        .row-header {
             display: flex;
             align-items: center;
+            gap: 10px;
             padding: 0 4%;
+            margin-bottom: 12px;
         }
+        .row-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #e5e5e5;
+            letter-spacing: 0.3px;
+        }
+        .row-count { display: none; }
 
-        .banner-content h1 { font-size: 3rem; margin: 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
-
-        /* Movie Row */
-        .row { margin: 30px 0 30px 4%; }
-        .row-title { font-size: 1.4rem; margin-bottom: 15px; font-weight: 600; color: #e5e5e5; }
-
+        /* ── Poster Row ── */
         .posters {
             display: flex;
             overflow-x: auto;
-            padding: 15px 0;
-            gap: 15px;
+            padding: 10px 4% 20px;
+            gap: 8px;
             scrollbar-width: none;
         }
         .posters::-webkit-scrollbar { display: none; }
 
+        /* ── Poster Card ── */
         .poster-card {
-            min-width: 170px;
-            max-width: 170px;
-            transition: transform 400ms cubic-bezier(0.25, 1, 0.5, 1);
-            cursor: pointer;
+            flex-shrink: 0;
+            width: 160px;
             background: var(--card-bg);
-            border-radius: 6px;
+            border-radius: 4px;
             overflow: hidden;
-            border: 1px solid transparent;
+            cursor: pointer;
+            position: relative;
+            transition: transform 0.25s cubic-bezier(0.25,1,0.5,1), box-shadow 0.25s;
+        }
+        .poster-card:hover {
+            transform: scale(1.08);
+            box-shadow: 0 10px 36px rgba(0,0,0,0.75);
+            z-index: 5;
+        }
+        .poster-card:hover .poster-overlay { opacity: 1; }
+
+        .poster-card img {
+            width: 100%;
+            height: 230px;
+            object-fit: cover;
+            display: block;
+            pointer-events: none;
         }
 
-        .poster-card:hover { 
-            transform: scale(1.08); 
-            border: 1px solid #444; 
-            z-index: 2;
+        .poster-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, transparent 55%);
+            display: flex;
+            align-items: flex-end;
+            padding: 10px;
+            opacity: 0;
+            transition: opacity 0.2s;
         }
-
-        .poster-card img { 
-            width: 100%; 
-            height: 240px; 
-            object-fit: cover; 
-            pointer-events: none; 
+        .play-btn {
+            background: var(--white);
+            color: #000;
+            border: none;
+            border-radius: 50%;
+            width: 34px; height: 34px;
+            font-size: 13px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
         }
+        .play-btn:hover { background: #ccc; }
 
         .poster-title {
-            font-size: 0.8rem;
-            margin: 8px;
-            color: var(--text-grey);
-            text-align: center;
-            pointer-events: none;
+            font-size: 0.72rem;
+            padding: 7px 8px 8px;
+            color: var(--grey);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
-        /* FULL PAGE PLAYER OVERLAY */
+        /* ── Inline load-more spinner ── */
+        .row-sentinel {
+            flex-shrink: 0;
+            width: 60px;
+            height: 265px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .row-spinner {
+            width: 24px; height: 24px;
+            border: 2px solid #333;
+            border-top-color: var(--red);
+            border-radius: 50%;
+            animation: spin 0.75s linear infinite;
+        }
+
+        /* ── Skeleton shimmer ── */
+        .skeleton {
+            flex-shrink: 0;
+            width: 160px;
+            height: 265px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #1e1e1e 25%, #2a2a2a 50%, #1e1e1e 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+        }
+        @keyframes shimmer { to { background-position: -200% 0; } }
+
+        /* ── Section divider ── */
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(to right, transparent, #2a2a2a 20%, #2a2a2a 80%, transparent);
+            margin: 4px 4%;
+        }
+
+        /* ── Full-page video overlay ── */
         #videoOverlay {
             display: none;
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
+            inset: 0;
             background: #000;
             z-index: 3000;
         }
-
-        #videoPlayer {
-            width: 100%;
-            height: 100%;
-            outline: none;
-        }
-
+        #videoPlayer { width: 100%; height: 100%; outline: none; }
         .close-player {
             position: absolute;
-            top: 25px; left: 25px;
-            font-size: 18px; color: #fff;
-            cursor: pointer; z-index: 3001;
-            background: rgba(0,0,0,0.6);
-            padding: 10px 20px; border-radius: 4px;
-            font-weight: bold;
-            border: 1px solid #444;
+            top: 22px; left: 22px;
+            font-size: 13px; font-weight: 700;
+            color: var(--white);
+            background: rgba(0,0,0,0.65);
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 9px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            z-index: 3001;
+            letter-spacing: 0.5px;
+            transition: background 0.15s;
         }
-        .close-player:hover { background: #fff; color: #000; }
+        .close-player:hover { background: var(--white); color: #000; }
 
-        /* Loader */
+        /* ── Stream loading overlay ── */
         #loader {
-            display: none; position: fixed; top: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); z-index: 4000;
-            justify-content: center; align-items: center; flex-direction: column;
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.88);
+            z-index: 4000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 16px;
         }
         .spinner {
-            width: 45px; height: 45px;
-            border: 4px solid #222;
-            border-top: 4px solid var(--accent-red);
+            width: 44px; height: 44px;
+            border: 3px solid #333;
+            border-top-color: var(--red);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-            margin-bottom: 15px;
+            animation: spin 0.75s linear infinite;
         }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #loader p { font-size: 0.8rem; letter-spacing: 2px; color: var(--grey); }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
     <div id="loader">
         <div class="spinner"></div>
-        <p style="letter-spacing: 1px; font-weight: bold;">LOADING STREAM...</p>
+        <p>LOADING STREAM...</p>
     </div>
 
     <div id="videoOverlay">
-        <div class="close-player" onclick="closePlayer()">✕ CLOSE PLAYER</div>
+        <div class="close-player" onclick="closePlayer()">&#10005; CLOSE</div>
         <video id="videoPlayer" controls autoplay playsinline></video>
     </div>
 
-    <nav class="navbar">
-        <img src="{{ url_for('static', filename='logo.png') }}" class="logo" onerror="this.style.display='none'">
-        <div class="brand-name">MovieNight</div>
+    <!-- Navbar -->
+    <nav class="navbar" id="navbar">
+        <span class="brand" onclick="window.scrollTo({top:0,behavior:'smooth'})">MovieNight</span>
+        <ul class="nav-tabs" id="navTabs">
+            <li><a href="#section-malayalam" data-target="section-malayalam" class="active">Malayalam</a></li>
+            <li><a href="#section-tamil"     data-target="section-tamil">Tamil</a></li>
+            <li><a href="#section-hindi"     data-target="section-hindi">Hindi</a></li>
+            <li><a href="#section-hollywood" data-target="section-hollywood">Hollywood</a></li>
+        </ul>
     </nav>
 
-    <header class="banner">
+    <!-- Hero Banner (Malayalam) -->
+    <header class="banner" id="banner">
+        <div class="banner-bg front"  id="bannerLayerA"></div>
+        <div class="banner-bg behind" id="bannerLayerB"></div>
+        <div class="banner-overlay"></div>
         <div class="banner-content">
-            <h1>Malayalam Featured</h1>
+            <h1 id="bannerTitle">Malayalam Featured</h1>
+            <p id="bannerSub">Stream the latest films</p>
         </div>
     </header>
 
-    <div class="row">
-        <div class="row-title">Recently Added</div>
-        <div class="posters" id="movie-list">
-            </div>
-    </div>
+    <!-- Malayalam Row -->
+    <section class="category-section" id="section-malayalam">
+        <div class="row-header">
+            <span class="row-title">Malayalam</span>
+            <span class="row-count" id="count-malayalam"></span>
+        </div>
+        <div class="posters" id="row-malayalam"></div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Tamil Row -->
+    <section class="category-section" id="section-tamil">
+        <div class="row-header">
+            <span class="row-title">Tamil</span>
+            <span class="row-count" id="count-tamil"></span>
+        </div>
+        <div class="posters" id="row-tamil"></div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Hindi Row -->
+    <section class="category-section" id="section-hindi">
+        <div class="row-header">
+            <span class="row-title">Hindi</span>
+            <span class="row-count" id="count-hindi"></span>
+        </div>
+        <div class="posters" id="row-hindi"></div>
+    </section>
+
+    <div class="section-divider"></div>
+
+    <!-- Hollywood Row -->
+    <section class="category-section" id="section-hollywood">
+        <div class="row-header">
+            <span class="row-title">Hollywood</span>
+            <span class="row-count" id="count-hollywood"></span>
+        </div>
+        <div class="posters" id="row-hollywood"></div>
+    </section>
+
+    <div style="height: 60px;"></div>
 
     <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js"></script>
     <script>
-        const loader = document.getElementById('loader');
+        const CATEGORIES = ['malayalam', 'tamil', 'hindi', 'hollywood'];
+        const BROKEN_IMG = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='230'><rect width='160' height='230' fill='%23222'/><text x='50%25' y='50%25' fill='%23555' text-anchor='middle' dominant-baseline='middle' font-size='36'>🎬</text></svg>`;
+
+        let hlsInstance     = null;
+        let malayalamMovies = [];
+        let bannerFront     = document.getElementById('bannerLayerA');
+        let bannerBehind    = document.getElementById('bannerLayerB');
+        let cycleTimer      = null;
+        let cycleIndex      = 0;
+        let hoverPaused     = false;
+
+        // per-category pagination state
+        const pageState = {};
+        CATEGORIES.forEach(cat => pageState[cat] = { page: 0, loading: false, done: false });
+
+        const loader  = document.getElementById('loader');
         const overlay = document.getElementById('videoOverlay');
-        const video = document.getElementById('videoPlayer');
-        let hlsInstance = null;
+        const video   = document.getElementById('videoPlayer');
 
-        async function fetchMovies() {
-            try {
-                const response = await fetch('/api/movies');
-                const data = await response.json();
-                
-                if (data.success) {
-                    const container = document.getElementById('movie-list');
-                    container.innerHTML = ''; 
-
-                    data.movies.forEach(movie => {
-                        const card = document.createElement('div');
-                        card.className = 'poster-card';
-                        card.innerHTML = `
-                            <img src="${movie.thumbnail}" alt="${movie.title}">
-                            <div class="poster-title">${movie.title}</div>
-                        `;
-
-                        // Handle click to play
-                        card.addEventListener('click', async (e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            startExtraction(movie.url, movie.title);
-                        }, true);
-
-                        container.appendChild(card);
-                    });
+        // ── Banner crossfade ──
+        function setBannerImage(url, title) {
+            bannerBehind.style.backgroundImage = `url('${url}')`;
+            const img = new Image();
+            img.onload = () => {
+                bannerBehind.classList.replace('behind', 'front');
+                bannerFront.classList.replace('front', 'behind');
+                [bannerFront, bannerBehind] = [bannerBehind, bannerFront];
+                if (title) {
+                    document.getElementById('bannerTitle').textContent = title;
+                    document.getElementById('bannerSub').textContent = 'Malayalam Featured';
                 }
-            } catch (err) {
-                console.error("Failed to load movies:", err);
+            };
+            img.src = url;
+        }
+
+        function startBannerCycle(movies) {
+            if (!movies || movies.length === 0) return;
+            malayalamMovies = movies.filter(m => m.thumbnail);
+            if (malayalamMovies.length === 0) return;
+            cycleIndex = Math.floor(Math.random() * malayalamMovies.length);
+            setBannerImage(malayalamMovies[cycleIndex].thumbnail, malayalamMovies[cycleIndex].title);
+            cycleTimer = setInterval(() => {
+                if (hoverPaused) return;
+                cycleIndex = (cycleIndex + 1) % malayalamMovies.length;
+                const m = malayalamMovies[cycleIndex];
+                setBannerImage(m.thumbnail, m.title);
+            }, 8000);
+        }
+
+        // ── Navbar scroll shadow ──
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 50);
+            updateScrollSpy();
+        }, { passive: true });
+
+        // ── Tab click → smooth scroll ──
+        document.querySelectorAll('.nav-tabs a').forEach(tab => {
+            tab.addEventListener('click', e => {
+                e.preventDefault();
+                const section = document.getElementById(tab.dataset.target);
+                if (section) section.scrollIntoView({ behavior: 'smooth' });
+            });
+        });
+
+        // ── Scroll-spy ──
+        function updateScrollSpy() {
+            let active = null;
+            CATEGORIES.forEach(cat => {
+                const el = document.getElementById('section-' + cat);
+                if (el && el.getBoundingClientRect().top <= 120) active = cat;
+            });
+            if (!active) active = 'malayalam';
+            document.querySelectorAll('.nav-tabs a').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.target === 'section-' + active);
+            });
+        }
+
+        // ── Skeleton placeholders (initial load only) ──
+        function showSkeletons(rowId, count = 8) {
+            const row = document.getElementById(rowId);
+            row.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const s = document.createElement('div');
+                s.className = 'skeleton';
+                row.appendChild(s);
             }
         }
 
-        async function startExtraction(url, title) {
+        // ── Build a poster card ──
+        function makeCard(movie, category) {
+            const card = document.createElement('div');
+            card.className = 'poster-card';
+            card.innerHTML = `
+                <img src="${movie.thumbnail}" alt="${movie.title}" loading="lazy" onerror="this.src='${BROKEN_IMG}'">
+                <div class="poster-overlay"><button class="play-btn">&#9654;</button></div>
+                <div class="poster-title">${movie.title}</div>
+            `;
+            card.addEventListener('click', () => startExtraction(movie.url));
+            if (category === 'malayalam' && movie.thumbnail) {
+                card.addEventListener('mouseenter', () => {
+                    hoverPaused = true;
+                    setBannerImage(movie.thumbnail, movie.title);
+                    // keep banner pool updated
+                    if (!malayalamMovies.find(m => m.url === movie.url)) {
+                        malayalamMovies.push(movie);
+                    }
+                });
+                card.addEventListener('mouseleave', () => { hoverPaused = false; });
+            }
+            return card;
+        }
+
+        // ── Sentinel (invisible div watched by IntersectionObserver) ──
+        const observers = {};
+
+        function attachSentinel(category) {
+            const row = document.getElementById('row-' + category);
+
+            // Remove old sentinel if present
+            const old = row.querySelector('.row-sentinel');
+            if (old) { observers[category]?.unobserve(old); old.remove(); }
+
+            const sentinel = document.createElement('div');
+            sentinel.className = 'row-sentinel';
+            sentinel.innerHTML = '<div class="row-spinner"></div>';
+            row.appendChild(sentinel);
+
+            if (!observers[category]) {
+                observers[category] = new IntersectionObserver(entries => {
+                    if (entries[0].isIntersecting) loadNextPage(category);
+                }, { root: row, threshold: 0.1 });
+            }
+            observers[category].observe(sentinel);
+        }
+
+        function removeSentinel(category) {
+            const row = document.getElementById('row-' + category);
+            const sentinel = row.querySelector('.row-sentinel');
+            if (sentinel) { observers[category]?.unobserve(sentinel); sentinel.remove(); }
+        }
+
+        // ── Append movies to a row ──
+        function appendMovies(category, movies) {
+            const row = document.getElementById('row-' + category);
+            movies.forEach(movie => row.appendChild(makeCard(movie, category)));
+        }
+
+        // ── Load next page for a category ──
+        async function loadNextPage(category) {
+            const state = pageState[category];
+            if (state.loading || state.done) return;
+            state.loading = true;
+
+            const nextPage = state.page + 1;
+            try {
+                const resp = await fetch(`/api/movies?category=${category}&page=${nextPage}`);
+                const data = await resp.json();
+                const movies = data.success ? data.movies : [];
+
+                if (movies.length === 0) {
+                    state.done = true;
+                    removeSentinel(category);
+                } else {
+                    state.page = nextPage;
+                    removeSentinel(category);         // remove old spinner
+                    appendMovies(category, movies);
+                    attachSentinel(category);         // attach new one at the end
+
+                    // Feed new Malayalam movies into banner pool
+                    if (category === 'malayalam') {
+                        malayalamMovies.push(...movies.filter(m => m.thumbnail));
+                    }
+                }
+            } catch (err) {
+                console.error(`Failed to load ${category} page ${nextPage}:`, err);
+                removeSentinel(category);
+            } finally {
+                state.loading = false;
+            }
+        }
+
+        // ── Initial fetch (page 1 for all categories) ──
+        async function fetchCategory(category) {
+            showSkeletons('row-' + category);
+            try {
+                const resp = await fetch(`/api/movies?category=${category}&page=1`);
+                const data = await resp.json();
+                const movies = data.success ? data.movies : [];
+
+                const row = document.getElementById('row-' + category);
+                row.innerHTML = '';
+
+                if (movies.length === 0) {
+                    row.innerHTML = `<p style="color:#555;padding:20px 0;font-size:0.85rem;">No movies found.</p>`;
+                    pageState[category].done = true;
+                    return;
+                }
+
+                pageState[category].page = 1;
+                appendMovies(category, movies);
+                attachSentinel(category);
+
+                if (category === 'malayalam') startBannerCycle(movies);
+            } catch (err) {
+                document.getElementById('row-' + category).innerHTML =
+                    `<p style="color:#555;padding:20px 0;font-size:0.85rem;">Failed to load.</p>`;
+                console.error(`Failed to load ${category}:`, err);
+            }
+        }
+
+        // ── Load all categories in parallel ──
+        CATEGORIES.forEach(cat => fetchCategory(cat));
+
+        // ── Stream extraction ──
+        async function startExtraction(url) {
             loader.style.display = 'flex';
             try {
                 const resp = await fetch('/api/extract', {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({ url: url })
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
                 });
-
                 const result = await resp.json();
-                console.log("Extractor result:", result.proxy_url);
                 if (result.success && result.proxy_url) {
                     playVideo(result.proxy_url);
                 } else {
-                    alert("Stream extraction failed. Please try another movie.");
+                    alert('Stream extraction failed. Try another movie.');
                 }
             } catch (err) {
+                alert('Error connecting to the extractor.');
                 console.error(err);
-                alert("Error connecting to the extractor.");
             } finally {
                 loader.style.display = 'none';
             }
         }
 
+        // ── HLS playback ──
         function playVideo(streamUrl) {
             overlay.style.display = 'block';
             document.body.style.overflow = 'hidden';
             if (Hls.isSupported()) {
-                if (hlsInstance) {
-                    hlsInstance.destroy();
-                }
-                hlsInstance = new Hls({
-                    maxBufferLength: 30,
-                    enableWorker: true
-                });
-
+                if (hlsInstance) hlsInstance.destroy();
+                hlsInstance = new Hls({ maxBufferLength: 30, enableWorker: true });
                 hlsInstance.loadSource(streamUrl);
                 hlsInstance.attachMedia(video);
-                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
-                    video.play().catch(e => console.log("Autoplay blocked:", e));
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                    video.play().catch(e => console.log('Autoplay blocked:', e));
                 });
-            } 
-            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = streamUrl;
                 video.play();
             }
@@ -276,15 +632,9 @@
             overlay.style.display = 'none';
             document.body.style.overflow = 'auto';
             video.pause();
-            if (hlsInstance) {
-                hlsInstance.destroy();
-                hlsInstance = null;
-            }
-            video.src = "";
+            if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+            video.src = '';
         }
-
-        // Initialize grid on load
-        fetchMovies();
     </script>
 </body>
 </html>

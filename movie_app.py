@@ -43,9 +43,10 @@ def index():
 
 @app.route('/api/movies')
 def api_movies():
-    # Fetch movie list for the UI
-    movies = get_cached_movies()
-    return jsonify({"success": True, "movies": movies})
+    category = request.args.get("category", "malayalam")
+    page     = int(request.args.get("page", 1))
+    movies   = get_cached_movies(category, page)
+    return jsonify({"success": True, "movies": movies, "page": page, "has_more": len(movies) > 0})
 
 # --- PROXY CONFIG ---
 PROXY_URL = "http://localhost:8001/api/extract"
