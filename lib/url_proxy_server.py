@@ -34,6 +34,7 @@ Run
 import os
 import re
 import urllib.parse
+from typing import Optional
 
 import requests as http_client
 from flask import Flask, request, jsonify, send_from_directory, Response
@@ -124,7 +125,7 @@ def _proxy_url(target_url):
     return request.host_url.rstrip("/") + "/api/proxy?url=" + urllib.parse.quote(target_url)
 
 
-def _strip_png_header(data: bytes) -> bytes | None:
+def _strip_png_header(data: bytes) -> Optional[bytes]:
     """
     Strip the fake PNG header prepended to obfuscated .ts chunks.
     Returns the TS data starting at the first valid MPEG-TS sync byte,
