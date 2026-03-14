@@ -1,5 +1,6 @@
 import os
 import sys
+import signal
 import requests
 import subprocess
 import threading
@@ -8,20 +9,33 @@ from movie_list_extractor import get_cached_movies
 
 app_dir = os.getcwd()
 proxy_script = os.path.join(app_dir, 'lib', 'url_proxy_server.py')
-app = Flask(__name__, 
+app = Flask(__name__,
             template_folder=os.path.join(app_dir, 'templates'),
             static_folder=os.path.join(app_dir, 'static'))
 
+proxy_process = None
+
 def start_proxy_server():
     """Launches the lib/url_proxy_server.py on port 8001."""
+    global proxy_process
     if os.path.exists(proxy_script):
         print(f"🚀 [System] Starting Proxy/Extractor on port 8001...")
-        subprocess.Popen(['python3', proxy_script, "8001"])
+        proxy_process = subprocess.Popen(['python3', proxy_script, "8001"])
     else:
         print(f"❌ [Error] Missing proxy script at: {proxy_script}")
 
+def shutdown(_signum, _frame):
+    print("\n👋 [System] Shutting down...")
+    if proxy_process and proxy_process.poll() is None:
+        proxy_process.terminate()
+        proxy_process.wait()
+    sys.exit(0)
+
+signal.signal(signal.SIGINT, shutdown)
+signal.signal(signal.SIGTERM, shutdown)
+
 # Start the proxy background process
-#threading.Thread(target=start_proxy_server, daemon=True).start()
+threading.Thread(target=start_proxy_server, daemon=True).start()
 
 @app.route('/')
 def index():
@@ -34,7 +48,7 @@ def api_movies():
     return jsonify({"success": True, "movies": movies})
 
 # --- PROXY CONFIG ---
-PROXY_URL = "http://192.168.1.6:8001/api/extract"
+PROXY_URL = "http://localhost:8001/api/extract"
 
 @app.route('/api/extract', methods=['POST'])
 def api_extract():

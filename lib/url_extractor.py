@@ -48,7 +48,7 @@ def extract_m3u8_url(iframe_url, referer):
         with requests.get(iframe_url, headers=headers, timeout=12) as resp:
             if resp.status_code != 200:
                 return {"error": f"HTTP {resp.status_code} from player"}
-            
+
             html = resp.text
 
             # --- Extraction Strategy 1: HTML5 Source Tag ---
