@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieNight | Stream</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --card-bg: #181818;
+            --accent-red: #E50914;
+            --text-main: #ffffff;
+            --text-grey: #a3a3a3;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Navbar */
+        .navbar {
+            position: fixed;
+            top: 0;
+            width: 100%;
+            height: 70px;
+            display: flex;
+            align-items: center;
+            padding: 0 4%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent);
+            z-index: 1000;
+        }
+
+        .logo { 
+            height: 40px; 
+            margin-right: 15px; 
+        }
+
+        .brand-name { 
+            color: var(--accent-red); 
+            font-size: 1.8rem; 
+            font-weight: bold; 
+            letter-spacing: 1px;
+        }
+
+        /* Hero Banner */
+        .banner {
+            height: 55vh;
+            background-image: linear-gradient(to top, var(--bg-color), transparent),
+                              linear-gradient(to right, rgba(0,0,0,0.8), transparent),
+                              url('https://www.5movierulz.florist/uploads/Merry-Christmas-Malayalam.jpg');
+            background-size: cover;
+            background-position: center 20%;
+            display: flex;
+            align-items: center;
+            padding: 0 4%;
+        }
+
+        .banner-content h1 { font-size: 3rem; margin: 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
+
+        /* Movie Row */
+        .row { margin: 30px 0 30px 4%; }
+        .row-title { font-size: 1.4rem; margin-bottom: 15px; font-weight: 600; color: #e5e5e5; }
+
+        .posters {
+            display: flex;
+            overflow-x: auto;
+            padding: 15px 0;
+            gap: 15px;
+            scrollbar-width: none;
+        }
+        .posters::-webkit-scrollbar { display: none; }
+
+        .poster-card {
+            min-width: 170px;
+            max-width: 170px;
+            transition: transform 400ms cubic-bezier(0.25, 1, 0.5, 1);
+            cursor: pointer;
+            background: var(--card-bg);
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid transparent;
+        }
+
+        .poster-card:hover { 
+            transform: scale(1.08); 
+            border: 1px solid #444; 
+            z-index: 2;
+        }
+
+        .poster-card img { 
+            width: 100%; 
+            height: 240px; 
+            object-fit: cover; 
+            pointer-events: none; 
+        }
+
+        .poster-title {
+            font-size: 0.8rem;
+            margin: 8px;
+            color: var(--text-grey);
+            text-align: center;
+            pointer-events: none;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* FULL PAGE PLAYER OVERLAY */
+        #videoOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 3000;
+        }
+
+        #videoPlayer {
+            width: 100%;
+            height: 100%;
+            outline: none;
+        }
+
+        .close-player {
+            position: absolute;
+            top: 25px; left: 25px;
+            font-size: 18px; color: #fff;
+            cursor: pointer; z-index: 3001;
+            background: rgba(0,0,0,0.6);
+            padding: 10px 20px; border-radius: 4px;
+            font-weight: bold;
+            border: 1px solid #444;
+        }
+        .close-player:hover { background: #fff; color: #000; }
+
+        /* Loader */
+        #loader {
+            display: none; position: fixed; top: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); z-index: 4000;
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        .spinner {
+            width: 45px; height: 45px;
+            border: 4px solid #222;
+            border-top: 4px solid var(--accent-red);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin-bottom: 15px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="spinner"></div>
+        <p style="letter-spacing: 1px; font-weight: bold;">LOADING STREAM...</p>
+    </div>
+
+    <div id="videoOverlay">
+        <div class="close-player" onclick="closePlayer()">✕ CLOSE PLAYER</div>
+        <video id="videoPlayer" controls autoplay playsinline></video>
+    </div>
+
+    <nav class="navbar">
+        <img src="{{ url_for('static', filename='logo.png') }}" class="logo" onerror="this.style.display='none'">
+        <div class="brand-name">MovieNight</div>
+    </nav>
+
+    <header class="banner">
+        <div class="banner-content">
+            <h1>Malayalam Featured</h1>
+        </div>
+    </header>
+
+    <div class="row">
+        <div class="row-title">Recently Added</div>
+        <div class="posters" id="movie-list">
+            </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js"></script>
+    <script>
+        const loader = document.getElementById('loader');
+        const overlay = document.getElementById('videoOverlay');
+        const video = document.getElementById('videoPlayer');
+        let hlsInstance = null;
+
+        async function fetchMovies() {
+            try {
+                const response = await fetch('/api/movies');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const container = document.getElementById('movie-list');
+                    container.innerHTML = ''; 
+
+                    data.movies.forEach(movie => {
+                        const card = document.createElement('div');
+                        card.className = 'poster-card';
+                        card.innerHTML = `
+                            <img src="${movie.thumbnail}" alt="${movie.title}">
+                            <div class="poster-title">${movie.title}</div>
+                        `;
+
+                        // Handle click to play
+                        card.addEventListener('click', async (e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            startExtraction(movie.url, movie.title);
+                        }, true);
+
+                        container.appendChild(card);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load movies:", err);
+            }
+        }
+
+        async function startExtraction(url, title) {
+            loader.style.display = 'flex';
+            try {
+                const resp = await fetch('/api/extract', {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const result = await resp.json();
+                console.log("Extractor result:", result.proxy_url);
+                if (result.success && result.proxy_url) {
+                    playVideo(result.proxy_url);
+                } else {
+                    alert("Stream extraction failed. Please try another movie.");
+                }
+            } catch (err) {
+                console.error(err);
+                alert("Error connecting to the extractor.");
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function playVideo(streamUrl) {
+            overlay.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            if (Hls.isSupported()) {
+                if (hlsInstance) {
+                    hlsInstance.destroy();
+                }
+                hlsInstance = new Hls({
+                    maxBufferLength: 30,
+                    enableWorker: true
+                });
+
+                hlsInstance.loadSource(streamUrl);
+                hlsInstance.attachMedia(video);
+                hlsInstance.on(Hls.Events.MANIFEST_PARSED, function () {
+                    video.play().catch(e => console.log("Autoplay blocked:", e));
+                });
+            } 
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = streamUrl;
+                video.play();
+            }
+        }
+
+        function closePlayer() {
+            overlay.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            video.pause();
+            if (hlsInstance) {
+                hlsInstance.destroy();
+                hlsInstance = null;
+            }
+            video.src = "";
+        }
+
+        // Initialize grid on load
+        fetchMovies();
+    </script>
+</body>
+</html>
