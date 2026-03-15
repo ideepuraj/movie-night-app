@@ -57,12 +57,20 @@ def api_extract():
     movie_url = data.get("url")
 
     try:
-        resp = requests.post(
-            f"{PROXY_URL}",
-            json={"url": movie_url},
-            timeout=20
-        )
-        return jsonify(resp.json())
+        resp = requests.post(PROXY_URL, json={"url": movie_url}, timeout=20)
+        result = resp.json()
+
+        # Rewrite proxy_url so the browser uses the server's public host:port
+        # (proxy server builds it as localhost:8001, which is unreachable from the browser)
+        if result.get("proxy_url"):
+            server_host = request.host.split(":")[0]
+            result["proxy_url"] = result["proxy_url"].replace(
+                "http://localhost:8001", f"http://{server_host}:8001"
+            ).replace(
+                "http://127.0.0.1:8001", f"http://{server_host}:8001"
+            )
+
+        return jsonify(result)
 
     except Exception as e:
         return jsonify({
